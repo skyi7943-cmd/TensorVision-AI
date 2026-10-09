@@ -278,12 +278,43 @@ class VisionEngine:
         else:
             self.use_fp16 = False
 
+    def _ensure_weights(self, model_name: str) -> str:
+        """Ensure model weights exist in self.model_dir, automatically downloading if missing."""
+        os.makedirs(self.model_dir, exist_ok=True)
+        model_path = os.path.join(self.model_dir, model_name)
+        if os.path.exists(model_path) and os.path.getsize(model_path) > 1024:
+            return model_path
+
+        print(f"[VisionEngine] Model weights missing: {model_name}. Downloading automatically...")
+        if model_name == "yolopv2.pt":
+            import urllib.request
+            url = "https://github.com/CAIC-AD/YOLOPv2/releases/download/V0.0.1/yolopv2.pt"
+            print(f"[VisionEngine] Downloading {model_name} from {url} (~150MB) ...")
+            try:
+                urllib.request.urlretrieve(url, model_path)
+                print(f"[VisionEngine] Download completed: {model_path}")
+            except Exception as e:
+                print(f"[VisionEngine] Failed to auto-download {model_name}: {e}")
+                raise FileNotFoundError(
+                    f"Model weights not found and auto-download failed for {model_name}: {e}\n"
+                    f"Please download manually from {url} and place in {self.model_dir}"
+                )
+        else:
+            # Ultralytics model (e.g., yolov8n.pt, yolov8n-pose.pt)
+            if YOLO is not None:
+                print(f"[VisionEngine] Auto-fetching Ultralytics weights for {model_name}...")
+                temp = YOLO(model_name)
+                if os.path.exists(model_name) and os.path.abspath(model_name) != os.path.abspath(model_path):
+                    import shutil
+                    shutil.move(model_name, model_path)
+        return model_path
+
     @_locked
     def load_detect_model(self, model_name="yolov8n.pt"):
         """Load YOLO detection model with CUDA/TensorCore optimizations."""
         if YOLO is None:
             raise RuntimeError("Ultralytics library not installed.")
-        model_path = os.path.join(self.model_dir, model_name)
+        model_path = self._ensure_weights(model_name)
         self.detect_model = YOLO(model_path)
         self.detect_model.to(self.device)
         if self.use_fp16 and self.device.startswith("cuda"):
@@ -297,7 +328,7 @@ class VisionEngine:
         """Load YOLO pose/skeleton estimation model."""
         if YOLO is None:
             raise RuntimeError("Ultralytics library not installed.")
-        model_path = os.path.join(self.model_dir, model_name)
+        model_path = self._ensure_weights(model_name)
         self.pose_model = YOLO(model_path)
         self.pose_model.to(self.device)
         if self.use_fp16 and self.device.startswith("cuda"):
@@ -311,7 +342,7 @@ class VisionEngine:
         """Load YOLOPv2 panoptic driving model (Detection + Road Surface + Lanes) with CUDA/TensorCore."""
         if not torch:
             raise RuntimeError("PyTorch is required for YOLOPv2.")
-        model_path = os.path.join(self.model_dir, model_name)
+        model_path = self._ensure_weights(model_name)
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"YOLOPv2 model weights not found at: {model_path}")
         self.road_model = torch.jit.load(model_path)

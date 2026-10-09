@@ -18,7 +18,7 @@ if sys.stderr is None:
 faulthandler.enable(_log)
 
 os.environ.setdefault("YOLO_AUTOINSTALL", "False")   # never pip-install at runtime
-os.environ.setdefault("YOLO_OFFLINE", "1")           # use bundled weights, no network checks
+# YOLO_OFFLINE is left unset so ultralytics can auto-download models if missing
 
 
 def _excepthook(exc_type, exc, tb):
