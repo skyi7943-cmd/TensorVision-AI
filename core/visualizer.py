@@ -49,6 +49,7 @@ class VisionVisualizer:
         self.show_tactical_lock = True   # 方案 A: 战术火控瞄准锁定与威胁研判
         self.show_cyber_profile = True   # 方案 A: 赛博黑客全息身份档案
         self.show_bev_radar = True       # 方案 B: 上帝视角 3D 俯视雷达小地图
+        self.kpt_conf_threshold = 0.20   # 骨骼关节置信度阈值 (远距离小目标增强降至 0.20)
 
     def draw_corner_rect(self, img, pt1, pt2, color, thickness=2, corner_len=18):
         """Draws aesthetic corner bracket bounding box for sci-fi/modern look."""
@@ -419,7 +420,7 @@ class VisionVisualizer:
                     conf1 = pt1[2] if len(pt1) > 2 else 1.0
                     conf2 = pt2[2] if len(pt2) > 2 else 1.0
 
-                    if conf1 > 0.4 and conf2 > 0.4:
+                    if conf1 >= self.kpt_conf_threshold and conf2 >= self.kpt_conf_threshold:
                         p1 = (int(pt1[0]), int(pt1[1]))
                         p2 = (int(pt2[0]), int(pt2[1]))
                         bone_color = LIMB_COLORS.get(limb_name, (200, 200, 200))
@@ -429,7 +430,7 @@ class VisionVisualizer:
             if self.show_keypoints and kpts is not None:
                 for kp in kpts:
                     kp_conf = kp[2] if len(kp) > 2 else 1.0
-                    if kp_conf > 0.4:
+                    if kp_conf >= self.kpt_conf_threshold:
                         cx, cy = int(kp[0]), int(kp[1])
                         cv2.circle(img, (cx, cy), 5, (255, 255, 255), -1, cv2.LINE_AA)
                         cv2.circle(img, (cx, cy), 3, COLOR_NEON_CYAN, -1, cv2.LINE_AA)

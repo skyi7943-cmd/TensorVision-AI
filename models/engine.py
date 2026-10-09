@@ -187,6 +187,7 @@ class VisionEngine:
         
         self.conf_threshold = 0.35
         self.iou_threshold = 0.45
+        self.imgsz = 640 # Default 640, supports 960 and 1280 for distant small targets
         
         # Telemetry metrics
         self.last_latency_ms = 0.0
@@ -277,6 +278,11 @@ class VisionEngine:
                     self.road_model.float()
         else:
             self.use_fp16 = False
+
+    @_locked
+    def set_imgsz(self, imgsz: int):
+        """Set inference image size (e.g. 640, 960, 1280). Higher resolution drastically improves distant target detection."""
+        self.imgsz = int(imgsz)
 
     def _ensure_weights(self, model_name: str) -> str:
         """Ensure model weights exist in self.model_dir, automatically downloading if missing."""
@@ -410,6 +416,7 @@ class VisionEngine:
             
             p_results = self.pose_model(
                 frame_bgr,
+                imgsz=self.imgsz,
                 conf=conf,
                 iou=iou,
                 device=self.device,
@@ -442,6 +449,7 @@ class VisionEngine:
 
             d_results = self.detect_model(
                 frame_bgr,
+                imgsz=self.imgsz,
                 conf=conf,
                 iou=iou,
                 device=self.device,

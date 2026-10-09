@@ -408,26 +408,54 @@ class MainWindow(QMainWindow):
         model_row = QHBoxLayout()
         model_lbl = QLabel("模型规模:")
         self.combo_model_size = QComboBox()
-        self.combo_model_size.addItems(["Nano (极速高帧率 ~180FPS)", "Small (高精度标准版 ~100FPS)"])
+        self.combo_model_size.addItems([
+            "Nano (极速高帧率 ~180FPS)",
+            "Small (高精度标准版 ~120FPS)",
+            "Medium (远距离增强推荐 ~80FPS)",
+            "X-Large (旗舰极致远距离 ~45FPS)"
+        ])
         self.combo_model_size.currentIndexChanged.connect(self._on_model_size_changed)
         model_row.addWidget(model_lbl)
         model_row.addWidget(self.combo_model_size, stretch=1)
 
+        res_row = QHBoxLayout()
+        res_lbl = QLabel("推理分辨率:")
+        self.combo_resolution = QComboBox()
+        self.combo_resolution.addItems([
+            "640x640 (标准/近中距离)",
+            "960x960 (清晰/中远距离增强)",
+            "1280x1280 (高清/超远距离极限侦测)"
+        ])
+        self.combo_resolution.currentIndexChanged.connect(self._on_resolution_changed)
+        res_row.addWidget(res_lbl)
+        res_row.addWidget(self.combo_resolution, stretch=1)
+
         accel_layout.addWidget(self.chk_cuda)
         accel_layout.addWidget(self.chk_tensor_core)
         accel_layout.addLayout(model_row)
+        accel_layout.addLayout(res_row)
         sidebar_layout.addWidget(group_accel)
 
         # 4. Parameters
-        group_params = QGroupBox("检测精度调节")
+        group_params = QGroupBox("检测精度调节与远距离强化")
         params_layout = QVBoxLayout(group_params)
-        self.slider_conf = LabeledSlider("置信度阈值 (Confidence)", 0.1, 0.95, 0.35, 0.05)
+        
+        self.chk_distant_boost = QCheckBox("🔭 一键开启远距离骨骼/小目标强化")
+        self.chk_distant_boost.setStyleSheet("color: #38bdf8; font-weight: bold; margin-bottom: 4px;")
+        self.chk_distant_boost.toggled.connect(self._on_distant_boost_toggled)
+
+        self.slider_conf = LabeledSlider("置信度阈值 (Confidence)", 0.05, 0.95, 0.35, 0.05)
         self.slider_conf.valueChanged.connect(lambda v: setattr(self.engine, 'conf_threshold', v))
+
+        self.slider_kpt = LabeledSlider("骨骼关节灵敏度 (Keypoint Conf)", 0.05, 0.60, 0.20, 0.05)
+        self.slider_kpt.valueChanged.connect(lambda v: setattr(self.visualizer, 'kpt_conf_threshold', v))
 
         self.slider_iou = LabeledSlider("交并比阈值 (IoU / NMS)", 0.1, 0.95, 0.45, 0.05)
         self.slider_iou.valueChanged.connect(lambda v: setattr(self.engine, 'iou_threshold', v))
 
+        params_layout.addWidget(self.chk_distant_boost)
         params_layout.addWidget(self.slider_conf)
+        params_layout.addWidget(self.slider_kpt)
         params_layout.addWidget(self.slider_iou)
         sidebar_layout.addWidget(group_params)
 
@@ -535,13 +563,41 @@ class MainWindow(QMainWindow):
         self._update_hardware_banner()
 
     def _on_model_size_changed(self, index):
-        model_det = "yolov8n.pt" if index == 0 else "yolov8s.pt"
-        model_pose = "yolov8n-pose.pt" if index == 0 else "yolov8s-pose.pt"
+        models = [
+            ("yolov8n.pt", "yolov8n-pose.pt"),
+            ("yolov8s.pt", "yolov8s-pose.pt"),
+            ("yolov8m.pt", "yolov8m-pose.pt"),
+            ("yolov8x.pt", "yolov8x-pose.pt"),
+        ]
+        if index < 0 or index >= len(models):
+            return
+        model_det, model_pose = models[index]
         try:
             self.engine.load_detect_model(model_det)
             self.engine.load_pose_model(model_pose)
         except Exception as e:
             QMessageBox.warning(self, "模型加载", f"切换模型失败: {e}")
+
+    def _on_resolution_changed(self, index):
+        res_map = [640, 960, 1280]
+        if 0 <= index < len(res_map):
+            self.engine.set_imgsz(res_map[index])
+
+    def _on_distant_boost_toggled(self, checked):
+        if checked:
+            # 开启远距离微小人体增强：
+            # 1. 切换至 1280x1280 高清推理分辨率（特征图分辨率提升 2 倍，像素点多 4 倍）
+            self.combo_resolution.setCurrentIndex(2)
+            # 2. 如果当前是极速版 Nano 模型，自动切换为 Medium 远距离增强模型
+            if self.combo_model_size.currentIndex() == 0:
+                self.combo_model_size.setCurrentIndex(2)
+            # 3. 调低检测和关节阈值，捕捉微小体态特征
+            self.slider_conf.setValue(0.20)
+            self.slider_kpt.setValue(0.15)
+        else:
+            self.combo_resolution.setCurrentIndex(0)
+            self.slider_conf.setValue(0.35)
+            self.slider_kpt.setValue(0.20)
 
     def _toggle_camera(self):
         if self.capture_thread.isRunning() and self.capture_thread.is_camera:
