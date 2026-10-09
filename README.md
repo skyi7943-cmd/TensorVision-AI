@@ -9,7 +9,7 @@
 [![CUDA](https://img.shields.io/badge/CUDA-12.4-76B900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/cuda-toolkit)
 [![Tensor Core](https://img.shields.io/badge/Tensor_Core-4th_Gen_Ada_Lovelace-00E5FF)](https://www.nvidia.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows_x64-0078D6?logo=windows)](https://github.com/)
+[![Platform](https://img.shields.io/badge/Platform-Windows_x64-0078D6?logo=windows)](https://github.com/skyi7943-cmd/TensorVision-AI)
 
 **专为搭载 NVIDIA RTX 显卡（如 RTX 4070 / Ada Lovelace 架构）深度定制的现代化桌面端全景智能视觉与自动驾驶感知系统。**
 <br>
@@ -106,7 +106,7 @@
 
 #### 1. 克隆代码仓库
 ```bash
-git clone https://github.com/<your-username>/TensorVision-AI.git
+git clone https://github.com/skyi7943-cmd/TensorVision-AI.git
 cd TensorVision-AI
 ```
 
