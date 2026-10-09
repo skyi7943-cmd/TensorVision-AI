@@ -1,0 +1,37 @@
+# PyInstaller & Build artifacts
+build/
+dist/
+*.spec.bak
+build_out.log
+
+# Model weights (Large files > 100MB cannot be pushed to standard Git)
+# Use `python download_models.py` to auto-fetch all required weights.
+weights/*.pt
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.Python
+env/
+venv/
+ENV/
+
+# Temporary test outputs
+test_*.jpg
+test_*.png
+*.tmp
+*.log
+*.lnk
+
+# OS / IDE
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
